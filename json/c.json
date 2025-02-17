@@ -1,0 +1,9 @@
+{
+    "escreva": "printf(\"$1\\n\");",
+    "leia": "scanf(\"%d\", &$1);",
+    "para": "for (int $1 = $2; $1 <= $3; $1++) {",
+    "fimpara": "}",
+    "se": "if ($1) {",
+    "fimse": "}",
+    "<-": "int $1 = $2;"
+}

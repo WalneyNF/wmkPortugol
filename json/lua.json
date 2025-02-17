@@ -1,0 +1,9 @@
+{
+    "escreva": "print",
+    "leia": "$1 = io.read()",
+    "para": "for $1 = $2, $3 do",
+    "fimpara": "end",
+    "se": "if $1 then",
+    "fimse": "end",
+    "<-": "$1 = $2"
+}
