@@ -1,9 +1,0 @@
-{
-    "escreva": "print",
-    "leia": "$1 = int(input())",
-    "para": "for $1 in range($2, $3 + 1):",
-    "fimpara": "",
-    "se": "if $1:",
-    "fimse": "",
-    "<-": "$1 = $2"
-}
