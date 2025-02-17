@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wmkPortugol - Editor Portugol</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f4f4f9;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .dark-mode #editor {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .dark-mode #output {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        #menu {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+        }
+        #menu > div {
+            display: flex;
+            gap: 10px;
+        }
+        #menu button {
+            background-color: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #menu button:hover {
+            text-decoration: underline;
+        }
+        .submenu {
+            position: relative;
+        }
+        .submenu div {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #0056b3;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        .submenu:hover div {
+            display: block;
+        }
+        .submenu div button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin: 5px 0;
+        }
+        #editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #editor {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            line-height: 1.5;
+            border: none;
+            outline: none;
+            background-color: #fafafa;
+            resize: none;
+            font-family: 'Courier New', Courier, monospace;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #output-container {
+            flex: 1;
+            border-top: 2px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: #fff;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #output {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #run-button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        #run-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <div>
+            <!-- Menu Arquivo -->
+            <div class="submenu">
+                <button>Arquivo</button>
+                <div>
+                    <button onclick="novoArquivo()">Novo</button>
+                    <button onclick="abrirArquivo()">Abrir</button>
+                    <button onclick="salvarArquivo()">Salvar</button>
+                </div>
+            </div>
+
+            <!-- Menu Editar -->
+            <div class="submenu">
+                <button>Editar</button>
+                <div>
+                    <button onclick="copiarTexto()">Copiar</button>
+                    <button onclick="colarTexto()">Colar</button>
+                    <button onclick="recortarTexto()">Recortar</button>
+                    <button onclick="desfazerAcao()">Desfazer</button>
+                </div>
+            </div>
+             <!-- Menu Conversão -->
+             <div class="submenu">
+                <button>Conversão</button>
+                <div>
+                    <button onclick="converterCodigo('javascript')">JavaScript</button>
+                    <button onclick="converterCodigo('python')">Python</button>
+                    <button onclick="converterCodigo('c')">C</button>
+                    <button onclick="converterCodigo('java')">Java</button>
+                    <button onclick="converterCodigo('php')">PHP</button>
+                    <button onclick="converterCodigo('csharp')">C#</button>
+                    <button onclick="converterCodigo('lua')">Lua</button>
+                    <button onclick="converterCodigo('gdscript')">GDScript</button>
+                    <button onclick="converterCodigo('gml')">GML</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div>
+            <!-- Botão Executar -->
+            <button id="run-button" onclick="executarCodigo()">Executar</button>
+            <button onclick="alternarTema()">Alternar Tema</button>
+           
+        </div>
+    </div>
+
+    <div id="editor-container">
+        <textarea id="editor" placeholder="Digite seu código em Portugol aqui..."></textarea>
+        <div id="output-container">
+            <h3>Saída:</h3>
+            <pre id="output"></pre>
+        </div>
+    </div>
+    
+    <script>
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+        let isDarkMode = false;
+
+        // Carregar arquivos JSON externos
+        async function carregarMapeamento(linguagem) {
+            try {
+                const response = await fetch(`json/${linguagem}.json`);
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar o mapeamento para ${linguagem}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(error.message);
+                return null;
+            }
+        }
+
+        // Função para interpretar o código simples em Portugol
+        function interpretarPortugol(codigo) {
+            try {
+                let resultado = '';
+                const comandos = codigo.split('\n').map(linha => linha.trim()).filter(linha => linha);
+                let variaveis = {}; // Armazena as variáveis globais
+
+                for (let i = 0; i < comandos.length; i++) {
+                    const comando = comandos[i];
+
+                    if (comando.startsWith('escreva')) {
+                        const texto = comando.replace(/escreva\s*\((.*)\)/, '$1').replace(/['"]/g, '');
+                        resultado += eval(`\`${resolverVariaveis(texto, variaveis)}\``) + '\n';
+                    } else if (comando.startsWith('leia')) {
+                        const variavel = comando.match(/leia\s*\((\w+)\)/)[1];
+                        variaveis[variavel] = prompt(`Insira o valor para ${variavel}:`);
+                    } else if (comando.startsWith('para')) {
+                        const [_, variavel, inicio, fim] = comando.match(/para\s+(\w+)\s+de\s+(\d+)\s+ate\s+(\d+)/);
+                        for (let j = parseInt(inicio); j <= parseInt(fim); j++) {
+                            variaveis[variavel] = j;
+                            resultado += `${variavel} = ${j}\n`;
+                        }
+                    } else if (comando.startsWith('se')) {
+                        const condicao = comando.match(/se\s+(.+)\s+entao/)[1];
+                        const valor = eval(resolverVariaveis(condicao, variaveis)); // Resolve variáveis na condição
+                        if (valor) {
+                            resultado += 'Condição verdadeira\n';
+                        } else {
+                            resultado += 'Condição falsa\n';
+                        }
+                    } else if (comando.includes('<-')) {
+                        const [variavel, valor] = comando.split('<-').map(part => part.trim());
+                        variaveis[variavel] = eval(resolverVariaveis(valor, variaveis)); // Resolve variáveis no valor
+                    }
+                }
+
+                return resultado;
+            } catch (error) {
+                return `Erro ao interpretar o código: ${error.message}`;
+            }
+        }
+
+        // Função para resolver variáveis em uma string
+        function resolverVariaveis(texto, variaveis) {
+            return texto.replace(/\b(\w+)\b/g, (_, variavel) => {
+                return variaveis[variavel] !== undefined ? variaveis[variavel] : variavel;
+            });
+        }
+
+        // Alternar tema claro/escuro
+        function alternarTema() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+        }
+
+        // Criar novo arquivo
+        function novoArquivo() {
+            editor.value = '';
+            output.textContent = '';
+        }
+
+        // Abrir arquivo .por
+        function abrirArquivo() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.por';
+            input.onchange = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        editor.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // Salvar arquivo .por
+        function salvarArquivo() {
+            const blob = new Blob([editor.value], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'codigo.por';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Executar código no editor
+        function executarCodigo() {
+            const codigo = editor.value;
+            const resultado = interpretarPortugol(codigo);
+            output.textContent = resultado;
+        }
+
+        // Converter código Portugol para outra linguagem
+        async function converterCodigo(linguagem) {
+            const mapeamento = await carregarMapeamento(linguagem);
+            if (!mapeamento) {
+                output.textContent = `Erro ao carregar mapeamento para ${linguagem.toUpperCase()}.`;
+                return;
+            }
+
+            const codigo = editor.value;
+            let codigoConvertido = '';
+            const comandos = codigo.split('\n').map(linha => linha.trim()).filter(linha => linha);
+
+            comandos.forEach(comando => {
+                if (comando.startsWith('escreva')) {
+                    const texto = comando.replace(/escreva\s*\((.*)\)/, '$1');
+                    codigoConvertido += `${mapeamento.escreva}(${texto});\n`;
+                } else if (comando.startsWith('leia')) {
+                    const variavel = comando.match(/leia\s*\((\w+)\)/)[1];
+                    codigoConvertido += mapeamento.leia.replace('$1', variavel) + '\n';
+                } else if (comando.startsWith('para')) {
+                    const [_, variavel, inicio, fim] = comando.match(/para\s+(\w+)\s+de\s+(\d+)\s+ate\s+(\d+)/);
+                    codigoConvertido += mapeamento.para
+                        .replace('$1', variavel)
+                        .replace('$2', inicio)
+                        .replace('$3', fim) + '\n';
+                } else if (comando.startsWith('fimpara')) {
+                    codigoConvertido += mapeamento.fimpara + '\n';
+                } else if (comando.startsWith('se')) {
+                    const condicao = comando.match(/se\s+(.+)\s+entao/)[1];
+                    codigoConvertido += mapeamento.se.replace('$1', condicao) + '\n';
+                } else if (comando.startsWith('fimse')) {
+                    codigoConvertido += mapeamento.fimse + '\n';
+                } else if (comando.includes('<-')) {
+                    const [variavel, valor] = comando.split('<-').map(part => part.trim());
+                    codigoConvertido += mapeamento['<-']
+                        .replace('$1', variavel)
+                        .replace('$2', valor) + '\n';
+                }
+            });
+
+            output.textContent = `Código convertido para ${linguagem.toUpperCase()}:\n\n` + codigoConvertido;
+        }
+
+        // Funções de edição
+        function copiarTexto() {
+            editor.select();
+            document.execCommand('copy');
+        }
+
+        function colarTexto() {
+            editor.focus();
+            document.execCommand('paste');
+        }
+
+        function recortarTexto() {
+            editor.select();
+            document.execCommand('cut');
+        }
+
+        function desfazerAcao() {
+            document.execCommand('undo');
+        }
+    </script>
+    <footer>wmkPortugol - 1.0.0 - 17/02/2025</footer>
+</body>
+</html>
