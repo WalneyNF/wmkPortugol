@@ -1,9 +1,0 @@
-{
-    "escreva": "show_message",
-    "leia": "$1 = get_integer('Digite um valor para $1:', 0)",
-    "para": "for ($1 = $2; $1 <= $3; $1++) {",
-    "fimpara": "}",
-    "se": "if ($1) {",
-    "fimse": "}",
-    "<-": "$1 = $2;"
-}
